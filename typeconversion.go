@@ -8,7 +8,7 @@ import (
 func fromGoType(gotype string) string {
 	gotypeWithoutPtr, ptrRef := separatePtr(gotype)
 
-	if strings.HasPrefix(gotypeWithoutPtr, "[]") {
+	if strings.HasPrefix(gotypeWithoutPtr, "[") {
 		return fromSliceType(gotypeWithoutPtr) + ptrRef
 	}
 
@@ -71,7 +71,18 @@ func fromMapType(gotype string) string {
 }
 
 func fromSliceType(gotype string) string {
-	gotype = gotype[2:]
-	ctype := fromGoType(gotype)
-	return ctype + "*"
+	re, _ := regexp.Compile(`^([[0-9]*])`)
+	matches := re.FindStringSubmatch(gotype)
+
+	if len(matches) > 1 {
+		prefix := matches[1]
+
+		if len(prefix) > 2 {
+			return fromGoType(gotype[len(prefix):]) + prefix
+		} else {
+			return fromGoType(gotype[len(prefix):]) + "*"
+		}
+	}
+
+	return "void *"
 }

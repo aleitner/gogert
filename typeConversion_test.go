@@ -24,6 +24,7 @@ var conversions = []struct {
 	{"memory.Size", "void"}, // custom basic type
 
 	{"[]int64", "int64_t*"},
+	{"[3]int64", "int64_t[3]"},
 	{"[][]int64", "int64_t**"},
 	{"*[]int64", "int64_t**"},
 	{"[][]*int64", "int64_t***"},
