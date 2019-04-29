@@ -80,8 +80,6 @@ func main() {
 }
 
 func fromGoType(gotype string) string {
-	var ctype string
-
 	gotypeWithoutPtr, ptrRef := separatePtr(gotype)
 
 	if strings.HasPrefix(gotypeWithoutPtr, "[]") {
@@ -94,55 +92,38 @@ func fromGoType(gotype string) string {
 
 	switch gotypeWithoutPtr {
 	case "string":
-		ctype = "uint8_t"
-		break
+		return "uint8_t" + ptrRef
 	case "bool":
-		ctype = "bool"
-		break
+		return "bool" + ptrRef
 	case "int8":
-		ctype = "int8_t"
-		break
+		return "int8_t" + ptrRef
 	case "uint8":
-		ctype = "uint8_t"
-		break
+		return "uint8_t" + ptrRef
 	case "byte":
-		ctype = "uint8_t"
-		break
+		return "uint8_t" + ptrRef
 	case "int16":
-		ctype = "int16_t"
-		break
+		return "int16_t" + ptrRef
 	case "uint16":
-		ctype = "uint16_t"
-		break
+		return "uint16_t" + ptrRef
 	case "int32":
-		ctype = "int32_t"
-		break
+		return "int32_t" + ptrRef
 	case "rune":
-		ctype = "int32_t"
-		break
+		return "int32_t" + ptrRef
 	case "uint32":
-		ctype = "uint32_t"
-		break
+		return "uint32_t" + ptrRef
 	case "int64":
-		ctype = "int64_t"
-		break
+		return "int64_t" + ptrRef
 	case "uint64":
-		ctype = "uint64_t"
-		break
+		return "uint64_t"
 	case "int": //TODO: This is platform dependent
-		ctype = "int64_t"
-		break
+		return "int64_t" + ptrRef
 	case "uint": //TODO: This is platform dependent
-		ctype = "uint64_t"
-		break
+		return "uint64_t" + ptrRef
 	case "uintptr": //TODO: This is platform dependent
-		ctype = "uint64_t"
-		break
+		return "uint64_t" + ptrRef
 	default:
-		ctype = "void"
+		return "void" + ptrRef
 	}
-
-	return ctype + ptrRef
 }
 
 func separatePtr(gotype string) (newgotype string, ptr string) {
@@ -168,7 +149,7 @@ func fromSliceType(gotype string) string {
 func generateStruct(fset *token.FileSet, w io.Writer, name string, fields *ast.FieldList) error {
 	const (
 		structBegin = "struct %s {\n"
-		fieldFormat = "\t%s %s;\n"
+		fieldFormat = "\t%s %s; // gotype: %s\n"
 		end         = "};\n\n"
 	)
 
@@ -183,7 +164,7 @@ func generateStruct(fset *token.FileSet, w io.Writer, name string, fields *ast.F
 			return err
 		}
 		ctype := fromGoType(typeNameBuf.String())
-		_, err = fmt.Fprintf(w, fieldFormat, ctype, field.Names[0].Name)
+		_, err = fmt.Fprintf(w, fieldFormat, ctype, field.Names[0].Name, typeNameBuf.String())
 		if err != nil {
 			return err
 		}
