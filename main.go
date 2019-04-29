@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"io"
 	"os"
@@ -66,7 +68,7 @@ func main() {
 
 	for name, structType := range structs {
 
-		err := generateStruct(os.Stdout, name, structType.Fields)
+		err := generateStruct(fset, os.Stdout, name, structType.Fields)
 		if err != nil {
 			panic(err)
 		}
@@ -77,11 +79,48 @@ func main() {
 	}
 }
 
-func generateStruct(w io.Writer, name string, fields *ast.FieldList) error {
+func FromGoType(gotype string) string {
+	switch gotype {
+	case "string":
+		return "uint8_t*"
+	case "bool":
+		return "bool"
+	case "int8":
+		return "int8_t"
+	case "uint8":
+		return "uint8_t"
+	case "byte":
+		return "uint8_t"
+	case "int16":
+		return "int16_t"
+	case "uint16":
+		return "uint16_t"
+	case "int32":
+		return "int32_t"
+	case "rune":
+		return "int32_t"
+	case "uint32":
+		return "uint32_t"
+	case "int64":
+		return "int64_t"
+	case "uint64":
+		return "uint64_t"
+	case "int": //TODO: This is platform dependent
+		return "int64_t"
+	case "uint": //TODO: This is platform dependent
+		return "uint64_t"
+	case "uintptr": //TODO: This is platform dependent
+		return "uint64_t"
+	default:
+		return gotype
+	}
+}
+
+func generateStruct(fset *token.FileSet, w io.Writer, name string, fields *ast.FieldList) error {
 	const (
 		structBegin = "struct %s {\n"
-		fieldFormat = "\t%s %s\n"
-		end         = "}\n\n"
+		fieldFormat = "\t%s %s;\n"
+		end         = "};\n\n"
 	)
 
 	_, err := fmt.Fprintf(w, structBegin, name)
@@ -89,7 +128,13 @@ func generateStruct(w io.Writer, name string, fields *ast.FieldList) error {
 		return err
 	}
 	for _, field := range fields.List {
-		_, err = fmt.Fprintf(w, fieldFormat, field.Names[0].Name, "butts")
+		var typeNameBuf bytes.Buffer
+		err := printer.Fprint(&typeNameBuf, fset, field.Type)
+		if err != nil {
+			return err
+		}
+		ctype := FromGoType(typeNameBuf.String())
+		_, err = fmt.Fprintf(w, fieldFormat, ctype, field.Names[0].Name)
 		if err != nil {
 			return err
 		}
