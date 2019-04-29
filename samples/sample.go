@@ -10,6 +10,7 @@ type A struct {
 	Bptr           *B
 	Bptr2          **B
 	Iptr           *int
+	str            string
 }
 
 //Butts CExport BString

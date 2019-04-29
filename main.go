@@ -92,7 +92,7 @@ func fromGoType(gotype string) string {
 
 	switch gotypeWithoutPtr {
 	case "string":
-		return "uint8_t" + ptrRef
+		return "uint8_t*" + ptrRef
 	case "bool":
 		return "bool" + ptrRef
 	case "int8":
@@ -114,11 +114,15 @@ func fromGoType(gotype string) string {
 	case "int64":
 		return "int64_t" + ptrRef
 	case "uint64":
-		return "uint64_t"
-	case "int": //TODO: This is platform dependent
-		return "int64_t" + ptrRef
-	case "uint": //TODO: This is platform dependent
 		return "uint64_t" + ptrRef
+	case "float32":
+		return "float" + ptrRef
+	case "float64":
+		return "double" + ptrRef
+	case "int":
+		return "int" + ptrRef
+	case "uint":
+		return "unsigned int" + ptrRef
 	case "uintptr": //TODO: This is platform dependent
 		return "uint64_t" + ptrRef
 	default:
