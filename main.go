@@ -79,41 +79,111 @@ func main() {
 	}
 }
 
-func FromGoType(gotype string) string {
-	switch gotype {
-	case "string":
-		return "uint8_t*"
-	case "bool":
-		return "bool"
-	case "int8":
-		return "int8_t"
-	case "uint8":
-		return "uint8_t"
-	case "byte":
-		return "uint8_t"
-	case "int16":
-		return "int16_t"
-	case "uint16":
-		return "uint16_t"
-	case "int32":
-		return "int32_t"
-	case "rune":
-		return "int32_t"
-	case "uint32":
-		return "uint32_t"
-	case "int64":
-		return "int64_t"
-	case "uint64":
-		return "uint64_t"
-	case "int": //TODO: This is platform dependent
-		return "int64_t"
-	case "uint": //TODO: This is platform dependent
-		return "uint64_t"
-	case "uintptr": //TODO: This is platform dependent
-		return "uint64_t"
+func fromGoType(gotype string) string {
+	var ctype string
+
+	switch typeOf(gotype) {
+	case "slice":
+		ctype = fromSliceType(gotype)
+		break
+	case "map":
+		ctype = fromMapType(gotype)
+		break
 	default:
-		return gotype
+		ctype = fromBasicType(gotype)
 	}
+
+	return ctype
+}
+
+func fromBasicType(gotype string) string {
+	var ctype string
+	gotypeWithoutPtr, ptrRef := separatePtr(gotype)
+
+	switch gotypeWithoutPtr {
+	case "string":
+		ctype = "uint8_t"
+		break
+	case "bool":
+		ctype = "bool"
+		break
+	case "int8":
+		ctype = "int8_t"
+		break
+	case "uint8":
+		ctype = "uint8_t"
+		break
+	case "byte":
+		ctype = "uint8_t"
+		break
+	case "int16":
+		ctype = "int16_t"
+		break
+	case "uint16":
+		ctype = "uint16_t"
+		break
+	case "int32":
+		ctype = "int32_t"
+		break
+	case "rune":
+		ctype = "int32_t"
+		break
+	case "uint32":
+		ctype = "uint32_t"
+		break
+	case "int64":
+		ctype = "int64_t"
+		break
+	case "uint64":
+		ctype = "uint64_t"
+		break
+	case "int": //TODO: This is platform dependent
+		ctype = "int64_t"
+		break
+	case "uint": //TODO: This is platform dependent
+		ctype = "uint64_t"
+		break
+	case "uintptr": //TODO: This is platform dependent
+		ctype = "uint64_t"
+		break
+	default:
+		fmt.Println("\t// Unknown type")
+		ctype = gotypeWithoutPtr
+	}
+
+	return ctype + ptrRef
+}
+
+func typeOf(gotype string) string {
+	if strings.HasPrefix(gotype, "[]") {
+		return "slice"
+	}
+
+	if strings.HasPrefix(gotype, "map") {
+		return "map"
+	}
+
+	return "basic"
+}
+
+func separatePtr(gotype string) (newgotype string, ptr string) {
+	re, _ := regexp.Compile(`(^\**)+`)
+	matches := re.FindStringSubmatch(gotype)
+	if len(matches) > 1 {
+		return gotype[len(matches[1]):], matches[1]
+	}
+
+	return gotype, ""
+}
+
+func fromMapType(gotype string) string {
+	return gotype
+}
+
+func fromSliceType(gotype string) string {
+	gotype = gotype[2:]
+	ctype := fromBasicType(gotype)
+	return fmt.Sprintf("// Array of %s\n\t", ctype) + ctype + "*"
 }
 
 func generateStruct(fset *token.FileSet, w io.Writer, name string, fields *ast.FieldList) error {
@@ -133,7 +203,7 @@ func generateStruct(fset *token.FileSet, w io.Writer, name string, fields *ast.F
 		if err != nil {
 			return err
 		}
-		ctype := FromGoType(typeNameBuf.String())
+		ctype := fromGoType(typeNameBuf.String())
 		_, err = fmt.Fprintf(w, fieldFormat, ctype, field.Names[0].Name)
 		if err != nil {
 			return err
