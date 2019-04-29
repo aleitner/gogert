@@ -82,23 +82,15 @@ func main() {
 func fromGoType(gotype string) string {
 	var ctype string
 
-	switch typeOf(gotype) {
-	case "slice":
-		ctype = fromSliceType(gotype)
-		break
-	case "map":
-		ctype = fromMapType(gotype)
-		break
-	default:
-		ctype = fromBasicType(gotype)
+	gotypeWithoutPtr, ptrRef := separatePtr(gotype)
+
+	if strings.HasPrefix(gotypeWithoutPtr, "[]") {
+		return fromSliceType(gotypeWithoutPtr) + ptrRef
 	}
 
-	return ctype
-}
-
-func fromBasicType(gotype string) string {
-	var ctype string
-	gotypeWithoutPtr, ptrRef := separatePtr(gotype)
+	if strings.HasPrefix(gotypeWithoutPtr, "map") {
+		return fromMapType(gotypeWithoutPtr) + ptrRef
+	}
 
 	switch gotypeWithoutPtr {
 	case "string":
@@ -147,23 +139,10 @@ func fromBasicType(gotype string) string {
 		ctype = "uint64_t"
 		break
 	default:
-		fmt.Println("\t// Unknown type")
-		ctype = gotypeWithoutPtr
+		ctype = "void"
 	}
 
 	return ctype + ptrRef
-}
-
-func typeOf(gotype string) string {
-	if strings.HasPrefix(gotype, "[]") {
-		return "slice"
-	}
-
-	if strings.HasPrefix(gotype, "map") {
-		return "map"
-	}
-
-	return "basic"
 }
 
 func separatePtr(gotype string) (newgotype string, ptr string) {
@@ -182,8 +161,8 @@ func fromMapType(gotype string) string {
 
 func fromSliceType(gotype string) string {
 	gotype = gotype[2:]
-	ctype := fromBasicType(gotype)
-	return fmt.Sprintf("// Array of %s\n\t", ctype) + ctype + "*"
+	ctype := fromGoType(gotype)
+	return ctype + "*"
 }
 
 func generateStruct(fset *token.FileSet, w io.Writer, name string, fields *ast.FieldList) error {
