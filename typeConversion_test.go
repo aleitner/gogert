@@ -29,6 +29,7 @@ var conversions = []struct {
 	{"*[]int64", "int64_t**"},
 	{"[][]*int64", "int64_t***"},
 	{"[]*[]int64", "int64_t***"},
+	{"[3][4]int64", "int64_t[4][3]"},
 	{"map[string]*Event", ""},
 	{"map[string]map[string]*Event", ""},
 }
