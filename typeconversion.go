@@ -23,9 +23,8 @@ func fromGoType(gotype string) string {
 		return "bool" + ptrRef
 	case "int8":
 		return "int8_t" + ptrRef
-	case "uint8":
-		return "uint8_t" + ptrRef
 	case "byte":
+	case "uint8":
 		return "uint8_t" + ptrRef
 	case "int16":
 		return "int16_t" + ptrRef
@@ -34,7 +33,6 @@ func fromGoType(gotype string) string {
 	case "int32":
 		return "int32_t" + ptrRef
 	case "rune":
-		return "int32_t" + ptrRef
 	case "uint32":
 		return "uint32_t" + ptrRef
 	case "int64":
@@ -49,11 +47,15 @@ func fromGoType(gotype string) string {
 		return "int" + ptrRef
 	case "uint":
 		return "unsigned int" + ptrRef
-	case "uintptr": //TODO: This is platform dependent
+	case "uintptr": // TODO: This is platform dependent
 		return "uint64_t" + ptrRef
+	case "complex64": // TODO: unsupported
+	case "complex128": // TODO: unsupported
 	default:
 		return "void" + ptrRef
 	}
+
+	return ""
 }
 
 func separatePtr(gotype string) (newgotype string, ptr string) {
