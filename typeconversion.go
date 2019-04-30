@@ -69,7 +69,29 @@ func separatePtr(gotype string) (newgotype string, ptr string) {
 }
 
 func fromMapType(gotype string) string {
+
+	key, value := keyValueFromMap(gotype)
+
 	return gotype
+}
+
+func keyValueFromMap(mapstr string) (key string, value string) {
+	key = ""
+	value = ""
+
+	re, _ := regexp.Compile(`^map\[([^\]]+)\]`)
+	matches := re.FindStringSubmatch(mapstr)
+	if len(matches) > 1 {
+		key = matches[1]
+	}
+
+	re, _ = regexp.Compile(`^map\[([^\]]+)\](.+)`)
+	matches = re.FindStringSubmatch(mapstr)
+	if len(matches) > 1 {
+		value = matches[1]
+	}
+
+	return key, value
 }
 
 func fromSliceType(gotype string) string {
