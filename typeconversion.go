@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"regexp"
 	"strings"
 )
@@ -70,9 +72,25 @@ func separatePtr(gotype string) (newgotype string, ptr string) {
 
 func fromMapType(gotype string) string {
 
-	// key, value := keyValueFromMap(gotype)
+	key, value := keyValueFromMap(gotype)
 
-	return gotype
+	ckey := fromGoType(key)
+	cvalue := fromGoType(value)
+
+	reg, err := regexp.Compile("[^a-zA-Z0-9_]+")
+	if err != nil {
+		log.Fatal(err)
+	}
+	mapName := reg.ReplaceAllString(strings.ReplaceAll(fmt.Sprintf("MAP_%s_%s", ckey, cvalue), "*", ""), "-")
+
+	if strings.HasPrefix(value, "map") {
+		fmt.Printf("struct %s {\n\t%s key; // gotype: %s\n\tstruct Something* value; // gotype: %s\n};\n\n", mapName, ckey, key, value)
+		return fmt.Sprintf("struct %s", mapName)
+	}
+
+	fmt.Printf("struct %s {\n\t%s key; // gotype: %s\n\t%s value; // gotype: %s\n};\n\n", mapName, ckey, key, cvalue, value)
+
+	return fmt.Sprintf("struct %s", mapName)
 }
 
 func keyValueFromMap(mapstr string) (key string, value string) {
@@ -85,7 +103,7 @@ func keyValueFromMap(mapstr string) (key string, value string) {
 		key = matches[1]
 	}
 
-	re, _ = regexp.Compile(`^map\[([^\]]+)\](.+)`)
+	re, _ = regexp.Compile(`^map\[[^\]]+\](.+)`)
 	matches = re.FindStringSubmatch(mapstr)
 	if len(matches) > 1 {
 		value = matches[1]
