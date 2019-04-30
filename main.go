@@ -7,8 +7,6 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
-	"io"
-	"os"
 	"regexp"
 	"strings"
 )
@@ -68,41 +66,56 @@ func main() {
 
 	for name, structType := range structs {
 
-		err := generateStruct(fset, os.Stdout, name, structType.Fields)
+		cstruct, err := generateStruct(fset, name, structType.Fields)
+		fmt.Println(cstruct.structDeclaration.String())
 		if err != nil {
 			panic(err)
 		}
+
 	}
 }
 
-func generateStruct(fset *token.FileSet, w io.Writer, name string, fields *ast.FieldList) error {
+type CstructMeta struct {
+	name              string
+	dependencies      []string
+	structDeclaration bytes.Buffer
+}
+
+func generateStruct(fset *token.FileSet, name string, fields *ast.FieldList) (cstruct *CstructMeta, err error) {
 	const (
 		structBegin = "#ifndef CSTRUCTS_%s\n\tstruct %s {\n"
 		fieldFormat = "\t\t%s %s; // gotype: %s\n"
 		end         = "\t};\n#endif\n\n"
 	)
 
-	_, err := fmt.Fprintf(w, structBegin, name, name)
+	cstruct = &CstructMeta{name: name}
+
+	_, err = fmt.Fprintf(&cstruct.structDeclaration, structBegin, name, name)
 	if err != nil {
-		return err
+		return cstruct, err
 	}
+
 	for _, field := range fields.List {
 		var typeNameBuf bytes.Buffer
 		err := printer.Fprint(&typeNameBuf, fset, field.Type)
 		if err != nil {
-			return err
+			return cstruct, err
 		}
+
 		ctype := fromGoType(typeNameBuf.String())
-		_, err = fmt.Fprintf(w, fieldFormat, ctype, field.Names[0].Name, typeNameBuf.String())
+		if strings.Contains(ctype, "struct") {
+			cstruct.dependencies = append(cstruct.dependencies, typeNameBuf.String())
+		}
+		_, err = fmt.Fprintf(&cstruct.structDeclaration, fieldFormat, ctype, field.Names[0].Name, typeNameBuf.String())
 		if err != nil {
-			return err
+			return cstruct, err
 		}
 	}
 
-	_, err = fmt.Fprintf(w, end)
+	_, err = fmt.Fprintf(&cstruct.structDeclaration, end)
 	if err != nil {
-		return err
+		return cstruct, err
 	}
 
-	return nil
+	return cstruct, nil
 }
