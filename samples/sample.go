@@ -7,8 +7,8 @@ type A struct {
 	B              B
 	I              int
 	Hi             memory.Size
-	events         map[string]*Event
-	eventsSuperMap map[string]map[string]*Event
+	events         map[string]*Sample
+	eventsSuperMap map[string]map[string]*Sample
 	Bptr           *B
 	Bptr2          **B
 	Iptr           *int
