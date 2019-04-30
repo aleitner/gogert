@@ -8,6 +8,7 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -15,15 +16,24 @@ import (
 
 func main() {
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "samples/main.go", nil, parser.ParseComments)
+	astPkgs, err := parser.ParseDir(fset, "samples/", func(info os.FileInfo) bool {
+		name := info.Name()
+		return !info.IsDir() && !strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".go")
+	}, parser.ParseComments)
+
 	if err != nil {
 		panic(err)
 	}
 
-	structNames := getStructNames(file)
-	structs := findStructs(file, structNames)
-	cStructs := fromGoStructs(structs, fset)
+	var cStructs []*CStructMeta
 
+	for _, pkg := range astPkgs {
+		for _, file := range pkg.Files {
+			structNames := getStructNames(file)
+			structs := findStructs(file, structNames)
+			cStructs = append(cStructs, fromGoStructs(structs, fset)...)
+		}
+	}
 	sort.Slice(cStructs, func(i, j int) bool {
 		return len(cStructs[i].dependencies) < len(cStructs[j].dependencies)
 	})
