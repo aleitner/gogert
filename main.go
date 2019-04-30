@@ -1,4 +1,4 @@
-package gogert
+package main
 
 import (
 	"bytes"
@@ -72,21 +72,17 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		// Interpolate name into template string for the struct definition
-		// `struct Type Name {}`
-		// recursively Iterate over each field and interpolate name and respective types to c definitions
-
 	}
 }
 
 func generateStruct(fset *token.FileSet, w io.Writer, name string, fields *ast.FieldList) error {
 	const (
-		structBegin = "struct %s {\n"
-		fieldFormat = "\t%s %s; // gotype: %s\n"
-		end         = "};\n\n"
+		structBegin = "#ifndef CSTRUCTS_%s\n\tstruct %s {\n"
+		fieldFormat = "\t\t%s %s; // gotype: %s\n"
+		end         = "\t};\n#endif\n\n"
 	)
 
-	_, err := fmt.Fprintf(w, structBegin, name)
+	_, err := fmt.Fprintf(w, structBegin, name, name)
 	if err != nil {
 		return err
 	}

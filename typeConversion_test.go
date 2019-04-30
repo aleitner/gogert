@@ -1,4 +1,4 @@
-package gogert
+package main
 
 import (
 	"os"
@@ -27,6 +27,8 @@ var conversions = []struct {
 	{"[3]int64", "int64_t[3]"},
 	{"[][]int64", "int64_t**"},
 	{"*[]int64", "int64_t**"},
+	{"[]B", "void*"},
+	{"[]*B", "void**"},
 	{"[][]*int64", "int64_t***"},
 	{"[]*[]int64", "int64_t***"},
 	{"[3][4]int64", "int64_t[4][3]"},

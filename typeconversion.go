@@ -1,4 +1,4 @@
-package gogert
+package main
 
 import (
 	"regexp"

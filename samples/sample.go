@@ -13,7 +13,7 @@ type A struct {
 	str            string
 }
 
-//Butts CExport BString
+//This shouldn't CExport BString
 type BString string
 
 /* hello */
