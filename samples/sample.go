@@ -1,4 +1,6 @@
-package main
+package samples
+
+import "storj.io/storj/internal/memory"
 
 //CExport A
 type A struct {
