@@ -1,3 +1,6 @@
 package pkg
 
-type Pkg struct {}
+type Pkg struct{}
+
+//CExport Pkg2
+type Pkg2 struct{}

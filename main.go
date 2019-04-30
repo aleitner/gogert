@@ -9,31 +9,49 @@ import (
 	"go/printer"
 	"go/token"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 )
 
 func main() {
-	fset := token.NewFileSet()
-	astPkgs, err := parser.ParseDir(fset, "samples/", func(info os.FileInfo) bool {
-		name := info.Name()
-		return !info.IsDir() && !strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".go")
-	}, parser.ParseComments)
+	var cStructs []*CStructMeta
+
+	err := filepath.Walk("samples/",
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if !info.IsDir() {
+				return nil
+			}
+
+			fset := token.NewFileSet()
+			astPkgs, err := parser.ParseDir(fset, path, func(info os.FileInfo) bool {
+				name := info.Name()
+				return !info.IsDir() && !strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".go")
+			}, parser.ParseComments)
+			if err != nil {
+				return err
+			}
+
+			for _, pkg := range astPkgs {
+				for _, file := range pkg.Files {
+					structNames := getStructNames(file)
+					structs := findStructs(file, structNames)
+					cStructs = append(cStructs, fromGoStructs(structs, fset)...)
+				}
+			}
+
+			return nil
+		})
 
 	if err != nil {
 		panic(err)
 	}
 
-	var cStructs []*CStructMeta
-
-	for _, pkg := range astPkgs {
-		for _, file := range pkg.Files {
-			structNames := getStructNames(file)
-			structs := findStructs(file, structNames)
-			cStructs = append(cStructs, fromGoStructs(structs, fset)...)
-		}
-	}
 	sort.Slice(cStructs, func(i, j int) bool {
 		return len(cStructs[i].dependencies) < len(cStructs[j].dependencies)
 	})

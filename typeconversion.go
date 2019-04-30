@@ -70,7 +70,7 @@ func separatePtr(gotype string) (newgotype string, ptr string) {
 
 func fromMapType(gotype string) string {
 
-	key, value := keyValueFromMap(gotype)
+	// key, value := keyValueFromMap(gotype)
 
 	return gotype
 }
