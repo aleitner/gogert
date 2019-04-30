@@ -15,10 +15,26 @@ import (
 	"strings"
 )
 
+type set map[string]struct{}
+
+type structTypeMap map[string]*ast.StructType
+
+type CStructMeta struct {
+	name              string
+	dependencies      []string
+	structDeclaration bytes.Buffer
+}
+
 func main() {
+	if err := Parse("samples/"); err != nil {
+		panic(err)
+	}
+}
+
+func Parse(path string) error {
 	var cStructs []*CStructMeta
 
-	err := filepath.Walk("samples/",
+	err := filepath.Walk(path,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -47,9 +63,8 @@ func main() {
 
 			return nil
 		})
-
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	sort.Slice(cStructs, func(i, j int) bool {
@@ -58,22 +73,17 @@ func main() {
 
 	cStructsJSON, err := json.MarshalIndent(cStructs, "", "  ")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Printf("cStructs: %s\n", cStructsJSON)
+
+	for _, cStruct := range cStructs {
+		fmt.Printf("deps: %d\n", cStruct.dependencies)
+	}
+	return nil
 }
 
-type set map[string]struct{}
-
-type structTypeMap map[string]*ast.StructType
-
-type CStructMeta struct {
-	name              string
-	dependencies      []string
-	structDeclaration bytes.Buffer
-}
-
-func generateStruct(fset *token.FileSet, name string, structs map[string]*ast.StructType, fields *ast.FieldList) (cstruct *CStructMeta, err error) {
+func generateStruct(fset *token.FileSet, name string, fields *ast.FieldList) (cstruct *CStructMeta, err error) {
 	const (
 		structBegin = "#ifndef CSTRUCTS_%s\n\tstruct %s {\n"
 		fieldFormat = "\t\t%s %s; // gotype: %s\n"
@@ -164,7 +174,7 @@ func findStructs(file *ast.File, structNames set) structTypeMap {
 func fromGoStructs(structs structTypeMap, fset *token.FileSet) []*CStructMeta {
 	var cStructs []*CStructMeta
 	for name, structType := range structs {
-		cstruct, err := generateStruct(fset, name, structs, structType.Fields)
+		cstruct, err := generateStruct(fset, name, structType.Fields)
 		if err != nil {
 			panic(err)
 		}
