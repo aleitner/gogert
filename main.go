@@ -31,9 +31,11 @@ func main() {
 	}
 }
 
+// Parse through a directory for exported go structs to be converted
 func Parse(path string) error {
 	var cStructs []*CStructMeta
 
+	// Walk through all directories
 	err := filepath.Walk(path,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -53,6 +55,7 @@ func Parse(path string) error {
 				return err
 			}
 
+			// Loop through every file and convert the exported go structs
 			for _, pkg := range astPkgs {
 				for _, file := range pkg.Files {
 					structNames := getStructNames(file)
@@ -67,9 +70,14 @@ func Parse(path string) error {
 		return err
 	}
 
+	// organize the cstructs
 	sort.Slice(cStructs, func(i, j int) bool {
 		return len(cStructs[i].dependencies) < len(cStructs[j].dependencies)
 	})
+
+	for _, cstruct := range cStructs {
+		fmt.Println(cstruct.structDeclaration.String())
+	}
 
 	cStructsJSON, err := json.MarshalIndent(cStructs, "", "  ")
 	if err != nil {
@@ -83,43 +91,47 @@ func Parse(path string) error {
 	return nil
 }
 
-func generateStruct(fset *token.FileSet, name string, fields *ast.FieldList) (cstruct *CStructMeta, err error) {
+// generateStructRecursivewill generate a cstruct and any cstruct dependencies
+func generateStructRecursive(fset *token.FileSet, name string, fields *ast.FieldList) (cstructs []*CStructMeta, err error) {
 	const (
 		structBegin = "#ifndef CSTRUCTS_%s\n\tstruct %s {\n"
 		fieldFormat = "\t\t%s %s; // gotype: %s\n"
 		end         = "\t};\n#endif\n\n"
 	)
 
-	cstruct = &CStructMeta{name: name}
+	cstructs = []*CStructMeta{}
+	cstruct := &CStructMeta{name: name}
+	cstructs = append(cstructs, cstruct)
 
 	_, err = fmt.Fprintf(&cstruct.structDeclaration, structBegin, name, name)
 	if err != nil {
-		return cstruct, err
+		return cstructs, err
 	}
 
 	for _, field := range fields.List {
 		var typeNameBuf bytes.Buffer
 		err := printer.Fprint(&typeNameBuf, fset, field.Type)
 		if err != nil {
-			return cstruct, err
+			return cstructs, err
 		}
 
-		ctype := fromGoType(typeNameBuf.String())
+		ctype, dependencies := fromGoType(typeNameBuf.String())
+		cstructs = append(cstructs, dependencies...)
 		if strings.Contains(ctype, "struct") {
 			cstruct.dependencies = append(cstruct.dependencies, typeNameBuf.String())
 		}
 		_, err = fmt.Fprintf(&cstruct.structDeclaration, fieldFormat, ctype, field.Names[0].Name, typeNameBuf.String())
 		if err != nil {
-			return cstruct, err
+			return cstructs, err
 		}
 	}
 
 	_, err = fmt.Fprintf(&cstruct.structDeclaration, end)
 	if err != nil {
-		return cstruct, err
+		return cstructs, err
 	}
 
-	return cstruct, nil
+	return cstructs, nil
 }
 
 func getStructNames(file *ast.File) set {
@@ -174,13 +186,12 @@ func findStructs(file *ast.File, structNames set) structTypeMap {
 func fromGoStructs(structs structTypeMap, fset *token.FileSet) []*CStructMeta {
 	var cStructs []*CStructMeta
 	for name, structType := range structs {
-		cstruct, err := generateStruct(fset, name, structType.Fields)
+		cstructRecursive, err := generateStructRecursive(fset, name, structType.Fields)
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Println(cstruct.structDeclaration.String())
-		cStructs = append(cStructs, cstruct)
+		cStructs = append(cStructs, cstructRecursive...)
 	}
 	return cStructs
 }
