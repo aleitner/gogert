@@ -99,12 +99,12 @@ func fromMapType(gotype string) (ctype string, dependencies []*CStructMeta) {
 
 	if strings.HasPrefix(value, "map") {
 		_, err = fmt.Fprintf(&mapStruct.structDeclaration, "struct %s {\n\t%s key; // gotype: %s\n\t%s value; // gotype: %s\n};\n\n", mapName, ckey, key, cvalue, value)
-		return fmt.Sprintf("struct* %s", mapName), dependencies
+		return fmt.Sprintf("struct %s*", mapName), dependencies
 	}
 
 	_, err = fmt.Fprintf(&mapStruct.structDeclaration, "struct %s {\n\t%s key; // gotype: %s\n\t%s value; // gotype: %s\n};\n\n", mapName, ckey, key, cvalue, value)
 
-	return fmt.Sprintf("struct* %s", mapName), dependencies
+	return fmt.Sprintf("struct %s*", mapName), dependencies
 }
 
 func keyValueFromMap(mapstr string) (key string, value string) {

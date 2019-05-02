@@ -32,8 +32,8 @@ var conversions = []struct {
 	{"[][]*int64", "long long***"},
 	{"[]*[]int64", "long long***"},
 	{"[3][4]int64", "long long[4][3]"},
-	{"map[string]*Event", "struct* MAP_char_void"},
-	{"map[string]map[string]*Event", "struct* MAP_char_struct-MAP_char_void"},
+	{"map[string]*Event", "struct MAP_char_void*"},
+	{"map[string]map[string]*Event", "struct MAP_char_struct-MAP_char_void*"},
 }
 
 func TestFromGoType(t *testing.T) {
