@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -79,15 +78,6 @@ func Parse(path string) error {
 		fmt.Println(cstruct.structDeclaration.String())
 	}
 
-	cStructsJSON, err := json.MarshalIndent(cStructs, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Printf("cStructs: %s\n", cStructsJSON)
-
-	for _, cStruct := range cStructs {
-		fmt.Printf("deps: %d\n", cStruct.dependencies)
-	}
 	return nil
 }
 
