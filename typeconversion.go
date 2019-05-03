@@ -20,6 +20,13 @@ func fromGoType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
 
 	// todo: check if type is a custom type or a struct
 
+	// Don't add ptr because void automatically adds one
+	if ctype == "void*" {
+		if len(ptrRef) > 0 {
+			ptrRef = ptrRef[1:]
+		}
+	}
+
 	return ctype + ptrRef, dependentTypes
 }
 
@@ -72,7 +79,7 @@ func fromBasicType(gotype string) string {
 	case "complex128":
 		return "double _Complex"
 	default:
-		return "void"
+		return "void*"
 	}
 
 	return ""
@@ -88,11 +95,11 @@ func fromMapType(gotype string) (ctype string, dependencies []*CStructMeta) {
 	dependencies = append(dependencies, keydependencies...)
 	dependencies = append(dependencies, valuedependencies...)
 
-	reg, err := regexp.Compile("[^a-zA-Z0-9_]+")
+	reg, err := regexp.Compile("[^a-zA-Z0-9]+")
 	if err != nil {
 		log.Fatal(err)
 	}
-	mapName := reg.ReplaceAllString(strings.ReplaceAll(fmt.Sprintf("MAP_%s_%s", ckey, cvalue), "*", ""), "-")
+	mapName := reg.ReplaceAllString(strings.ReplaceAll(fmt.Sprintf("MAP_%s_%s", ckey, cvalue), "*", ""), "_")
 
 	mapStruct := &CStructMeta{name: mapName}
 	dependencies = append(dependencies, mapStruct)
@@ -103,10 +110,16 @@ func fromMapType(gotype string) (ctype string, dependencies []*CStructMeta) {
 
 	if strings.HasPrefix(value, "map") {
 		_, err = fmt.Fprintf(&mapStruct.structDeclaration, "struct %s {\n\t%s key; // gotype: %s\n\t%s value; // gotype: %s\n};\n\n", mapName, ckey, key, cvalue, value)
+		if err != nil {
+			log.Fatal(err)
+		}
 		return fmt.Sprintf("struct %s*", mapName), dependencies
 	}
 
 	_, err = fmt.Fprintf(&mapStruct.structDeclaration, "struct %s {\n\t%s key; // gotype: %s\n\t%s value; // gotype: %s\n};\n\n", mapName, ckey, key, cvalue, value)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return fmt.Sprintf("struct %s*", mapName), dependencies
 }

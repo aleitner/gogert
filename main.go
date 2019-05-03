@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"io"
+	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -25,13 +30,55 @@ type CStructMeta struct {
 }
 
 func main() {
-	if err := Parse("samples/"); err != nil {
-		panic(err)
+	input := flag.String("input", ".", "input directory")
+	output := flag.String("output", "stdout", "output directory")
+
+	flag.Parse()
+
+	fi, err := os.Stat(*input)
+	if os.IsNotExist(err) {
+		log.Fatal(err)
 	}
+
+	if !fi.IsDir() {
+		log.Fatal(fmt.Errorf("Specified Input Path is not a directory: %s", *output))
+	}
+
+	var outputFile *os.File
+	if *output == "stdout" {
+		outputFile = os.Stdout
+	} else {
+		outputPath := path.Join(*output, "/cstructs.h")
+
+		fi, err := os.Stat(*output)
+		if os.IsNotExist(err) {
+			log.Fatal(err)
+		}
+
+		if !fi.IsDir() {
+			log.Fatal(fmt.Errorf("Specified Output Path is not a directory: %s", *output))
+		}
+
+		outputFile, err = os.Create(outputPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer func() {
+			if err := outputFile.Close(); err != nil {
+				log.Fatal(err)
+			}
+		}()
+	}
+
+	w := bufio.NewWriter(outputFile)
+	if err := Parse(w, *input); err != nil {
+		log.Fatal(err)
+	}
+	w.Flush()
 }
 
 // Parse through a directory for exported go structs to be converted
-func Parse(path string) error {
+func Parse(w io.Writer, path string) error {
 	var cStructs []*CStructMeta
 
 	// Walk through all directories
@@ -75,8 +122,7 @@ func Parse(path string) error {
 	})
 
 	for _, cstruct := range cStructs {
-		fmt.Println(cstruct.structDeclaration.String())
-		fmt.Println(cstruct.dependencies)
+		fmt.Fprintf(w, cstruct.structDeclaration.String())
 	}
 
 	return nil
@@ -179,7 +225,7 @@ func fromGoStructs(structs structTypeMap, fset *token.FileSet) []*CStructMeta {
 	for name, structType := range structs {
 		cstructRecursive, err := generateStructRecursive(fset, name, structType.Fields)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 
 		cStructs = append(cStructs, cstructRecursive...)
