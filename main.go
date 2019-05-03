@@ -76,6 +76,7 @@ func Parse(path string) error {
 
 	for _, cstruct := range cStructs {
 		fmt.Println(cstruct.structDeclaration.String())
+		fmt.Println(cstruct.dependencies)
 	}
 
 	return nil
@@ -108,7 +109,7 @@ func generateStructRecursive(fset *token.FileSet, name string, fields *ast.Field
 		ctype, dependencies := fromGoType(typeNameBuf.String())
 		cstructs = append(cstructs, dependencies...)
 		if strings.Contains(ctype, "struct") {
-			cstruct.dependencies = append(cstruct.dependencies, typeNameBuf.String())
+			cstruct.dependencies = append(cstruct.dependencies, ctype)
 		}
 		_, err = fmt.Fprintf(&cstruct.structDeclaration, fieldFormat, ctype, field.Names[0].Name, typeNameBuf.String())
 		if err != nil {
