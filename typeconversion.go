@@ -97,6 +97,10 @@ func fromMapType(gotype string) (ctype string, dependencies []*CStructMeta) {
 	mapStruct := &CStructMeta{name: mapName}
 	dependencies = append(dependencies, mapStruct)
 
+	if strings.Contains(cvalue, "struct") {
+		mapStruct.dependencies = append(mapStruct.dependencies, cvalue)
+	}
+
 	if strings.HasPrefix(value, "map") {
 		_, err = fmt.Fprintf(&mapStruct.structDeclaration, "struct %s {\n\t%s key; // gotype: %s\n\t%s value; // gotype: %s\n};\n\n", mapName, ckey, key, cvalue, value)
 		return fmt.Sprintf("struct %s*", mapName), dependencies
