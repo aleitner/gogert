@@ -163,6 +163,11 @@ func generateStructRecursive(fset *token.FileSet, name string, fields *ast.Field
 		}
 	}
 
+	_, err = fmt.Fprint(&cstruct.structDeclaration, "\t\t__SIZE_TYPE__ ptrRef; // gotype: uintptr\n")
+	if err != nil {
+		return cstructs, err
+	}
+
 	_, err = fmt.Fprintf(&cstruct.structDeclaration, end)
 	if err != nil {
 		return cstructs, err
