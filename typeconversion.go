@@ -67,7 +67,7 @@ func separatePtr(gotype string) (newgotype string, ptr string) {
 }
 
 func (c *typeConverter) fromComplexType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
-	_, err := c.plugin.Lookup(gotype)
+	_, err := c.plugin.Lookup("Butts")
 	if err != nil {
 		fmt.Println(err)
 		return gotype, dependentTypes
