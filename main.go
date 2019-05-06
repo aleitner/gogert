@@ -29,12 +29,17 @@ type CStructMeta struct {
 	structDeclaration bytes.Buffer
 }
 
+var (
+	input      = flag.String("input-path", ".", "input directory")
+	objectPath = flag.String("object-path", "", "path of object for recursively checking types of struct dependencies")
+	output     = flag.String("output-path", "stdout", "output directory")
+)
+
 func main() {
-	input := flag.String("input", ".", "input directory")
-	output := flag.String("output", "stdout", "output directory")
 
 	flag.Parse()
 
+	// Check if input path exists
 	fi, err := os.Stat(*input)
 	if os.IsNotExist(err) {
 		log.Fatal(err)
@@ -44,6 +49,15 @@ func main() {
 		log.Fatal(fmt.Errorf("Specified Input Path is not a directory: %s", *output))
 	}
 
+	// Check if object exists
+	if *objectPath != "" {
+		_, err := os.Stat(*input)
+		if os.IsNotExist(err) {
+			log.Fatal(err)
+		}
+	}
+
+	// Validate output path
 	var outputFile *os.File
 	if *output == "stdout" {
 		outputFile = os.Stdout
@@ -152,7 +166,12 @@ func generateStructRecursive(fset *token.FileSet, name string, fields *ast.Field
 			return cstructs, err
 		}
 
-		ctype, dependencies := fromGoType(typeNameBuf.String())
+		converter, err := NewConverter(*objectPath)
+		if err != nil {
+			return cstructs, err
+		}
+
+		ctype, dependencies := converter.fromGoType(typeNameBuf.String())
 		cstructs = append(cstructs, dependencies...)
 		if strings.Contains(ctype, "struct") {
 			cstruct.dependencies = append(cstruct.dependencies, ctype)
@@ -163,6 +182,7 @@ func generateStructRecursive(fset *token.FileSet, name string, fields *ast.Field
 		}
 	}
 
+	// TODO: Make this optional by comment
 	_, err = fmt.Fprint(&cstruct.structDeclaration, "\t\t__SIZE_TYPE__ ptrRef; // gotype: uintptr\n")
 	if err != nil {
 		return cstructs, err

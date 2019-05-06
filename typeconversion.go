@@ -3,22 +3,49 @@ package main
 import (
 	"fmt"
 	"log"
+	"plugin"
 	"regexp"
 	"strings"
 )
 
-func fromGoType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
+type typeConverter struct {
+	plugin *plugin.Plugin
+}
+
+// NewConverter creates typeConverter for converting gotype to ctype
+func NewConverter(object string) (*typeConverter, error) {
+	c := &typeConverter{}
+
+	if object == "" {
+		return c, nil
+	}
+
+	p, err := plugin.Open(object)
+	if err != nil {
+		return c, err
+	}
+
+	c.plugin = p
+
+	return c, nil
+}
+
+func (c *typeConverter) fromGoType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
 	gotypeWithoutPtr, ptrRef := separatePtr(gotype)
 
 	if strings.HasPrefix(gotypeWithoutPtr, "[") {
-		ctype, dependentTypes = fromSliceType(gotypeWithoutPtr)
+		ctype, dependentTypes = c.fromSliceType(gotypeWithoutPtr)
 	} else if strings.HasPrefix(gotypeWithoutPtr, "map") {
-		ctype, dependentTypes = fromMapType(gotypeWithoutPtr)
+		ctype, dependentTypes = c.fromMapType(gotypeWithoutPtr)
 	} else {
-		ctype = fromBasicType(gotypeWithoutPtr)
+		ctype = c.fromBasicType(gotypeWithoutPtr)
 	}
 
 	// todo: check if type is a custom type or a struct
+	if c.plugin != nil && ctype == "void*" {
+		fmt.Println("We need to do something about ", gotype)
+		// convert?
+	}
 
 	// Don't add ptr because void automatically adds one
 	if ctype == "void*" {
@@ -40,7 +67,7 @@ func separatePtr(gotype string) (newgotype string, ptr string) {
 	return gotype, ""
 }
 
-func fromBasicType(gotype string) string {
+func (c *typeConverter) fromBasicType(gotype string) string {
 	switch gotype {
 	case "string":
 		return "char*"
@@ -85,12 +112,12 @@ func fromBasicType(gotype string) string {
 	return ""
 }
 
-func fromMapType(gotype string) (ctype string, dependencies []*CStructMeta) {
+func (c *typeConverter) fromMapType(gotype string) (ctype string, dependencies []*CStructMeta) {
 
 	key, value := keyValueFromMap(gotype)
 
-	ckey, keydependencies := fromGoType(key)
-	cvalue, valuedependencies := fromGoType(value)
+	ckey, keydependencies := c.fromGoType(key)
+	cvalue, valuedependencies := c.fromGoType(value)
 
 	dependencies = append(dependencies, keydependencies...)
 	dependencies = append(dependencies, valuedependencies...)
@@ -143,14 +170,14 @@ func keyValueFromMap(mapstr string) (key string, value string) {
 	return key, value
 }
 
-func fromSliceType(gotype string) (ctype string, dependencies []*CStructMeta) {
+func (c *typeConverter) fromSliceType(gotype string) (ctype string, dependencies []*CStructMeta) {
 	re, _ := regexp.Compile(`^([[0-9]*])`)
 	matches := re.FindStringSubmatch(gotype)
 
 	if len(matches) > 1 {
 		prefix := matches[1]
 
-		ctype, dependencies := fromGoType(gotype[len(prefix):])
+		ctype, dependencies := c.fromGoType(gotype[len(prefix):])
 
 		// Check if slice has a specified size or not
 		if len(prefix) > 2 {
