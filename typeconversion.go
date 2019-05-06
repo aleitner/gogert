@@ -43,8 +43,7 @@ func (c *typeConverter) fromGoType(gotype string) (ctype string, dependentTypes 
 
 	// todo: check if type is a custom type or a struct
 	if c.plugin != nil && ctype == "void*" {
-		fmt.Println("We need to do something about ", gotype)
-		// convert?
+		ctype, dependentTypes = c.fromComplexType(gotype)
 	}
 
 	// Don't add ptr because void automatically adds one
@@ -65,6 +64,16 @@ func separatePtr(gotype string) (newgotype string, ptr string) {
 	}
 
 	return gotype, ""
+}
+
+func (c *typeConverter) fromComplexType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
+	_, err := c.plugin.Lookup(gotype)
+	if err != nil {
+		fmt.Println(err)
+		return gotype, dependentTypes
+	}
+	// convert?
+	return gotype, dependentTypes
 }
 
 func (c *typeConverter) fromBasicType(gotype string) string {

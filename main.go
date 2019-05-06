@@ -30,9 +30,9 @@ type CStructMeta struct {
 }
 
 var (
-	input      = flag.String("input-path", ".", "input directory")
+	input      = flag.String("input-dir", ".", "input directory")
 	objectPath = flag.String("object-path", "", "path of object for recursively checking types of struct dependencies")
-	output     = flag.String("output-path", "stdout", "output directory")
+	output     = flag.String("output-dir", "stdout", "output directory")
 )
 
 func main() {
