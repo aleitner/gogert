@@ -79,8 +79,8 @@ func (c *TypeConverter) fromGoType(gotype string) (ctype string, dependentTypes 
 	}
 
 	// todo: check if type is a custom type or a struct
-	if c.plugin != nil && ctype == "void*" {
-		ctype, dependentTypes = c.fromComplexType(gotypeWithoutPtr)
+	if ctype == "void*" {
+		// ctype, dependentTypes = c.fromComplexType(gotypeWithoutPtr)
 	}
 
 	// Don't add ptr because void automatically adds one
