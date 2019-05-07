@@ -25,6 +25,10 @@ type Field struct {
 	GoType string
 }
 
+func (f *Field) String() string {
+	return fmt.Sprintf(fieldFormat, f.CType, f.Name, f.GoType)
+}
+
 // CStructMeta contains all necessary information about a c struct converted from a go struct
 type CStructMeta struct {
 	Name                  string
@@ -41,7 +45,7 @@ func (meta *CStructMeta) String() (cstruct string) {
 	}
 
 	for _, field := range meta.Fields {
-		_, err = fmt.Fprintf(&cstructBytes, fieldFormat, field.CType, field.Name, field.GoType)
+		_, err = fmt.Fprintf(&cstructBytes, field.String())
 		if err != nil {
 			return ""
 		}
