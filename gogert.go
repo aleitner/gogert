@@ -159,7 +159,7 @@ func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, depend
 		cDeclaration.Fields = append(cDeclaration.Fields, &Field{
 			Name:   fieldName,
 			CType:  fieldCType,
-			GoType: gotype,
+			GoType: typeInSource,
 		})
 
 		cDeclaration.DependencyStructNames = append(cDeclaration.DependencyStructNames, fieldName)
@@ -174,7 +174,7 @@ func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, depend
 }
 
 func (c *TypeConverter) fromComplexType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
-	fmt.Println(gotype)
+	// fmt.Println(gotype)
 
 	return ctype, dependentTypes
 }
