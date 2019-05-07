@@ -34,7 +34,7 @@ type CStructMeta struct {
 	Name                  string
 	Fields                []*Field
 	DependencyStructNames []string
-	HasPointer            bool
+	hasPointer            bool
 }
 
 func (meta *CStructMeta) String() (cstruct string) {
@@ -51,7 +51,7 @@ func (meta *CStructMeta) String() (cstruct string) {
 		}
 	}
 
-	if meta.HasPointer {
+	if meta.hasPointer {
 		_, err = fmt.Fprint(&cstructBytes, "\t\t__SIZE_TYPE__ ptrRef; // gotype: uintptr\n")
 		if err != nil {
 			return ""
