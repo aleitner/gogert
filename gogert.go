@@ -3,7 +3,6 @@ package gogert
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 )
@@ -35,6 +34,11 @@ type CStructMeta struct {
 	Fields                []*Field
 	DependencyStructNames []string
 	hasPointer            bool
+}
+
+// NewCStructMeta returns a new CStructMeta struct
+func NewCStructMeta(name string, hasPointer bool) (*CStructMeta, error) {
+	return &CStructMeta{Name: name, hasPointer: hasPointer}, nil
 }
 
 func (meta *CStructMeta) String() (cstruct string) {
@@ -173,11 +177,14 @@ func (c *TypeConverter) fromMapType(gotype string) (ctype string, dependencies [
 	// Determine map stuct name
 	reg, err := regexp.Compile("[^a-zA-Z0-9]+")
 	if err != nil {
-		log.Fatal(err)
+		return "void*", dependencies
 	}
 	mapName := reg.ReplaceAllString(strings.ReplaceAll(fmt.Sprintf("MAP_%s_%s", ckey, cvalue), "*", ""), "_")
 
-	mapStruct := &CStructMeta{Name: mapName}
+	mapStruct, err := NewCStructMeta(mapName, false)
+	if err != nil {
+		return "void*", dependencies
+	}
 	dependencies = append(dependencies, mapStruct)
 
 	// if the cvalue is a struct then we need to recognize that as a dependency
