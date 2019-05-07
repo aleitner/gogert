@@ -3,6 +3,9 @@ package gogert
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"regexp"
 	"strings"
 )
@@ -83,6 +86,8 @@ func (c *TypeConverter) FromGoType(gotype string) (ctype string, dependentTypes 
 		ctype, dependentTypes = c.fromSliceType(gotypeWithoutPtr)
 	} else if strings.HasPrefix(gotypeWithoutPtr, "map") {
 		ctype, dependentTypes = c.fromMapType(gotypeWithoutPtr)
+	} else if isAnonymousStruct(gotypeWithoutPtr) {
+		ctype, dependentTypes = c.fromAnonymousStruct(gotypeWithoutPtr)
 	} else {
 		ctype = c.fromBasicType(gotypeWithoutPtr)
 	}
@@ -112,10 +117,64 @@ func separatePtr(gotype string) (newgotype string, ptr string) {
 	return gotype, ""
 }
 
+func isAnonymousStruct(gotype string) bool {
+	re, _ := regexp.Compile(`^[a-zA-Z0-9]+ struct`)
+	return re.MatchString(gotype)
+}
+
+func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, dependentTypes []*CStructMeta) {
+	// Add package main for parsing
+	src := fmt.Sprintf("package main;\ntype %s", gotype)
+
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "", src, 0)
+	if err != nil {
+		return "void*", dependentTypes
+	}
+
+	// hard coding looking these up
+	typeDecl := f.Decls[0].(*ast.GenDecl)
+	t := typeDecl.Specs[0].(*ast.TypeSpec)
+	structDecl := t.Type.(*ast.StructType)
+	fields := structDecl.Fields.List
+
+	typeName := t.Name.Name
+	cDeclaration, err := NewCStructMeta(typeName, false)
+	if err != nil {
+		return "void*", dependentTypes
+	}
+
+	for _, field := range fields {
+		typeExpr := field.Type
+
+		start := typeExpr.Pos() - 1
+		end := typeExpr.End() - 1
+
+		// grab it in source
+		typeInSource := src[start:end]
+
+		fieldName := field.Names[0].Name
+
+		fieldCType, fieldDependencies := c.FromGoType(typeInSource)
+		cDeclaration.Fields = append(cDeclaration.Fields, &Field{
+			Name:   fieldName,
+			CType:  fieldCType,
+			GoType: gotype,
+		})
+
+		cDeclaration.DependencyStructNames = append(cDeclaration.DependencyStructNames, fieldName)
+		dependentTypes = append(dependentTypes, fieldDependencies...)
+	}
+
+	ctype = fmt.Sprintf("struct* %s", typeName)
+
+	return ctype, dependentTypes
+}
+
 func (c *TypeConverter) fromComplexType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
-	fmt.Println("Complex type conversion ", gotype)
-	// convert?
-	return gotype, dependentTypes
+	fmt.Println(gotype)
+
+	return ctype, dependentTypes
 }
 
 func (c *TypeConverter) fromBasicType(gotype string) string {
