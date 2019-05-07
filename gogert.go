@@ -20,34 +20,34 @@ type TypeConverter struct {
 
 // Field contains all information about a particular field that was converted from go to C
 type Field struct {
-	ctype  string
-	name   string
-	gotype string
+	CType  string
+	Name   string
+	GoType string
 }
 
 // CStructMeta contains all necessary information about a c struct converted from a go struct
 type CStructMeta struct {
-	name                  string
-	fields                []*Field
-	dependencyStructNames []string
-	hasPointer            bool
+	Name                  string
+	Fields                []*Field
+	DependencyStructNames []string
+	HasPointer            bool
 }
 
 func (meta *CStructMeta) String() (cstruct string) {
 	var cstructBytes bytes.Buffer
-	_, err := fmt.Fprintf(&cstructBytes, structBegin, meta.name, meta.name)
+	_, err := fmt.Fprintf(&cstructBytes, structBegin, meta.Name, meta.Name)
 	if err != nil {
 		return ""
 	}
 
-	for _, field := range meta.fields {
-		_, err = fmt.Fprintf(&cstructBytes, fieldFormat, field.ctype, field.name, field.gotype)
+	for _, field := range meta.Fields {
+		_, err = fmt.Fprintf(&cstructBytes, fieldFormat, field.CType, field.Name, field.GoType)
 		if err != nil {
 			return ""
 		}
 	}
 
-	if meta.hasPointer {
+	if meta.HasPointer {
 		_, err = fmt.Fprint(&cstructBytes, "\t\t__SIZE_TYPE__ ptrRef; // gotype: uintptr\n")
 		if err != nil {
 			return ""
@@ -173,27 +173,28 @@ func (c *TypeConverter) fromMapType(gotype string) (ctype string, dependencies [
 	}
 	mapName := reg.ReplaceAllString(strings.ReplaceAll(fmt.Sprintf("MAP_%s_%s", ckey, cvalue), "*", ""), "_")
 
-	mapStruct := &CStructMeta{name: mapName}
+	mapStruct := &CStructMeta{Name: mapName}
 	dependencies = append(dependencies, mapStruct)
 
 	// if the cvalue is a struct then we need to recognize that as a dependency
 	if strings.Contains(cvalue, "struct") {
-		mapStruct.dependencyStructNames = append(mapStruct.dependencyStructNames, cvalue)
+		mapStruct.DependencyStructNames = append(mapStruct.DependencyStructNames, cvalue)
 	}
 
 	keyField := &Field{
-		name:   "key",
-		ctype:  ckey,
-		gotype: key,
+		Name:   "key",
+		CType:  ckey,
+		GoType: key,
 	}
 
 	valueField := &Field{
-		name:   "value",
-		ctype:  cvalue,
-		gotype: value,
+
+		Name:   "value",
+		CType:  cvalue,
+		GoType: value,
 	}
 
-	mapStruct.fields = append(mapStruct.fields, keyField, valueField)
+	mapStruct.Fields = append(mapStruct.Fields, keyField, valueField)
 
 	return fmt.Sprintf("struct %s*", mapName), dependencies
 }
