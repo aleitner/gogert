@@ -1,36 +1,73 @@
-package main
+package gogert
 
 import (
+	"bytes"
 	"fmt"
 	"log"
-	"plugin"
 	"regexp"
 	"strings"
 )
 
-type typeConverter struct {
-	plugin *plugin.Plugin
+var (
+	structBegin = "#ifndef CSTRUCTS_%s\n\tstruct %s {\n"
+	fieldFormat = "\t\t%s %s; // gotype: %s\n"
+	end         = "\t};\n#endif\n\n"
+)
+
+// TypeConverter contains necessary info for converting a gotype to a c type
+type TypeConverter struct {
 }
 
-// NewConverter creates typeConverter for converting gotype to ctype
-func NewConverter(object string) (*typeConverter, error) {
-	c := &typeConverter{}
+// Field contains all information about a particular field that was converted from go to C
+type Field struct {
+	ctype  string
+	name   string
+	gotype string
+}
 
-	if object == "" {
-		return c, nil
-	}
+// CStructMeta contains all necessary information about a c struct converted from a go struct
+type CStructMeta struct {
+	name                  string
+	fields                []*Field
+	dependencyStructNames []string
+	hasPointer            bool
+}
 
-	p, err := plugin.Open(object)
+func (meta *CStructMeta) String() (cstruct string) {
+	var cstructBytes bytes.Buffer
+	_, err := fmt.Fprintf(&cstructBytes, structBegin, meta.name, meta.name)
 	if err != nil {
-		return c, err
+		return ""
 	}
 
-	c.plugin = p
+	for _, field := range meta.fields {
+		_, err = fmt.Fprintf(&cstructBytes, fieldFormat, field.ctype, field.name, field.gotype)
+		if err != nil {
+			return ""
+		}
+	}
 
-	return c, nil
+	if meta.hasPointer {
+		_, err = fmt.Fprint(&cstructBytes, "\t\t__SIZE_TYPE__ ptrRef; // gotype: uintptr\n")
+		if err != nil {
+			return ""
+		}
+	}
+
+	_, err = fmt.Fprintf(&cstructBytes, end)
+	if err != nil {
+		return ""
+	}
+
+	return cstructBytes.String()
 }
 
-func (c *typeConverter) fromGoType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
+// NewConverter creates TypeConverter for converting gotype to ctype
+func NewConverter() (*TypeConverter, error) {
+	return &TypeConverter{}, nil
+}
+
+func (c *TypeConverter) fromGoType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
 	gotypeWithoutPtr, ptrRef := separatePtr(gotype)
 
 	if strings.HasPrefix(gotypeWithoutPtr, "[") {
@@ -43,7 +80,7 @@ func (c *typeConverter) fromGoType(gotype string) (ctype string, dependentTypes 
 
 	// todo: check if type is a custom type or a struct
 	if c.plugin != nil && ctype == "void*" {
-		ctype, dependentTypes = c.fromComplexType(gotype)
+		ctype, dependentTypes = c.fromComplexType(gotypeWithoutPtr)
 	}
 
 	// Don't add ptr because void automatically adds one
@@ -66,17 +103,13 @@ func separatePtr(gotype string) (newgotype string, ptr string) {
 	return gotype, ""
 }
 
-func (c *typeConverter) fromComplexType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
-	_, err := c.plugin.Lookup("Butts")
-	if err != nil {
-		fmt.Println(err)
-		return gotype, dependentTypes
-	}
+func (c *TypeConverter) fromComplexType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
+	fmt.Println("Complex type conversion ", gotype)
 	// convert?
 	return gotype, dependentTypes
 }
 
-func (c *typeConverter) fromBasicType(gotype string) string {
+func (c *TypeConverter) fromBasicType(gotype string) string {
 	switch gotype {
 	case "string":
 		return "char*"
@@ -121,16 +154,19 @@ func (c *typeConverter) fromBasicType(gotype string) string {
 	return ""
 }
 
-func (c *typeConverter) fromMapType(gotype string) (ctype string, dependencies []*CStructMeta) {
-
+func (c *TypeConverter) fromMapType(gotype string) (ctype string, dependencies []*CStructMeta) {
+	// split go map into a key and value
 	key, value := keyValueFromMap(gotype)
 
+	// Convert the key and value go types to ctypes
 	ckey, keydependencies := c.fromGoType(key)
 	cvalue, valuedependencies := c.fromGoType(value)
 
+	// add dependencies created from converting the keys and values
 	dependencies = append(dependencies, keydependencies...)
 	dependencies = append(dependencies, valuedependencies...)
 
+	// Determine map stuct name
 	reg, err := regexp.Compile("[^a-zA-Z0-9]+")
 	if err != nil {
 		log.Fatal(err)
@@ -140,22 +176,24 @@ func (c *typeConverter) fromMapType(gotype string) (ctype string, dependencies [
 	mapStruct := &CStructMeta{name: mapName}
 	dependencies = append(dependencies, mapStruct)
 
+	// if the cvalue is a struct then we need to recognize that as a dependency
 	if strings.Contains(cvalue, "struct") {
-		mapStruct.dependencies = append(mapStruct.dependencies, cvalue)
+		mapStruct.dependencyStructNames = append(mapStruct.dependencyStructNames, cvalue)
 	}
 
-	if strings.HasPrefix(value, "map") {
-		_, err = fmt.Fprintf(&mapStruct.structDeclaration, "struct %s {\n\t%s key; // gotype: %s\n\t%s value; // gotype: %s\n};\n\n", mapName, ckey, key, cvalue, value)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return fmt.Sprintf("struct %s*", mapName), dependencies
+	keyField := &Field{
+		name:   "key",
+		ctype:  ckey,
+		gotype: key,
 	}
 
-	_, err = fmt.Fprintf(&mapStruct.structDeclaration, "struct %s {\n\t%s key; // gotype: %s\n\t%s value; // gotype: %s\n};\n\n", mapName, ckey, key, cvalue, value)
-	if err != nil {
-		log.Fatal(err)
+	valueField := &Field{
+		name:   "value",
+		ctype:  cvalue,
+		gotype: value,
 	}
+
+	mapStruct.fields = append(mapStruct.fields, keyField, valueField)
 
 	return fmt.Sprintf("struct %s*", mapName), dependencies
 }
@@ -179,7 +217,7 @@ func keyValueFromMap(mapstr string) (key string, value string) {
 	return key, value
 }
 
-func (c *typeConverter) fromSliceType(gotype string) (ctype string, dependencies []*CStructMeta) {
+func (c *TypeConverter) fromSliceType(gotype string) (ctype string, dependencies []*CStructMeta) {
 	re, _ := regexp.Compile(`^([[0-9]*])`)
 	matches := re.FindStringSubmatch(gotype)
 

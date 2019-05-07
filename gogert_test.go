@@ -1,4 +1,4 @@
-package main
+package gogert
 
 import (
 	"os"
@@ -39,7 +39,7 @@ var conversions = []struct {
 }
 
 func TestFromGoType(t *testing.T) {
-	converter, err := NewConverter("")
+	converter, err := NewConverter()
 	if err != nil {
 		require.NoError(t, err)
 	}
