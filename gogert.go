@@ -75,7 +75,8 @@ func NewConverter() (*TypeConverter, error) {
 	return &TypeConverter{}, nil
 }
 
-func (c *TypeConverter) fromGoType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
+// FromGoType will convert a go type string to a ctypestring
+func (c *TypeConverter) FromGoType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
 	gotypeWithoutPtr, ptrRef := separatePtr(gotype)
 
 	if strings.HasPrefix(gotypeWithoutPtr, "[") {
@@ -167,8 +168,8 @@ func (c *TypeConverter) fromMapType(gotype string) (ctype string, dependencies [
 	key, value := keyValueFromMap(gotype)
 
 	// Convert the key and value go types to ctypes
-	ckey, keydependencies := c.fromGoType(key)
-	cvalue, valuedependencies := c.fromGoType(value)
+	ckey, keydependencies := c.FromGoType(key)
+	cvalue, valuedependencies := c.FromGoType(value)
 
 	// add dependencies created from converting the keys and values
 	dependencies = append(dependencies, keydependencies...)
@@ -236,7 +237,7 @@ func (c *TypeConverter) fromSliceType(gotype string) (ctype string, dependencies
 	if len(matches) > 1 {
 		prefix := matches[1]
 
-		ctype, dependencies := c.fromGoType(gotype[len(prefix):])
+		ctype, dependencies := c.FromGoType(gotype[len(prefix):])
 
 		// Check if slice has a specified size or not
 		if len(prefix) > 2 {
