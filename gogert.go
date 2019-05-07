@@ -168,6 +168,8 @@ func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, depend
 
 	ctype = fmt.Sprintf("struct* %s", typeName)
 
+	dependentTypes = append(dependentTypes, cDeclaration)
+
 	return ctype, dependentTypes
 }
 
