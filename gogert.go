@@ -124,7 +124,7 @@ func isAnonymousStruct(gotype string) bool {
 
 func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, dependentTypes []*CStructMeta) {
 	anonymousBegin := "struct {\n"
-	anonymousField := "\t%s %s // gotype: %s\n"
+	anonymousField := "\t%s %s; // gotype: %s\n"
 	anonymousEnd := "}"
 
 	var ctypeBytes bytes.Buffer
