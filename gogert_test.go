@@ -11,9 +11,9 @@ var conversions = []struct {
 	gotype string // input
 	ctype  string // expected result
 }{
-	{"B", "B"},     // struct
-	{"*B", "B*"},   // pointer struct
-	{"**B", "B**"}, // pointer to a pointer of a struct
+	{"B", "struct B"},     // struct
+	{"*B", "struct B*"},   // pointer struct
+	{"**B", "struct B**"}, // pointer to a pointer of a struct
 
 	{"int64", "long long"},   // basic type
 	{"string", "char*"},      // basic type
@@ -26,13 +26,13 @@ var conversions = []struct {
 	{"[3]int64", "long long[3]"},
 	{"[][]int64", "long long**"},
 	{"*[]int64", "long long**"},
-	{"[]B", "B*"},
-	{"[]*B", "B**"},
+	{"[]B", "struct B*"},
+	{"[]*B", "struct B**"},
 	{"[][]*int64", "long long***"},
 	{"[]*[]int64", "long long***"},
 	{"[3][4]int64", "long long[4][3]"},
-	{"map[string]*Event", "struct MAP_char_Event*"},
-	{"map[string]map[string]*Event", "struct MAP_char_struct_MAP_char_Event*"},
+	{"map[string]*Event", "struct MAP_char_struct_Event*"},
+	{"map[string]map[string]*Event", "struct MAP_char_struct_MAP_char_struct_Event*"},
 	{"struct {\n\ta bool\n\tb int\n}", "struct {\n\tbool a; // gotype: bool\n\tint b; // gotype: int\n}"},
 }
 

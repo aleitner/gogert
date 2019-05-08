@@ -59,7 +59,7 @@ func (meta *CStructMeta) String() (cstruct string) {
 	}
 
 	if meta.hasPointer {
-		_, err = fmt.Fprint(&cstructBytes, "\t\t__SIZE_TYPE__ ptrRef; // gotype: uintptr\n")
+		_, err = fmt.Fprint(&cstructBytes, "\t\t__SIZE_TYPE__ PtrRef; // gotype: uintptr\n")
 		if err != nil {
 			return ""
 		}
@@ -226,7 +226,7 @@ func (c *TypeConverter) fromBasicType(gotype string) string {
 	case "interface{}":
 		return "void*"
 	default:
-		return gotype
+		return fmt.Sprintf("struct %s", gotype)
 	}
 
 	return ""
