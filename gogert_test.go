@@ -36,7 +36,7 @@ var conversions = []struct {
 	{"[3][4]int64", "long long[4][3]"},
 	{"map[string]*Event", "struct MAP_char_void*"},
 	{"map[string]map[string]*Event", "struct MAP_char_struct_MAP_char_void*"},
-	{"test struct {\n\ta bool\n\tb int\n}", "struct* test"},
+	{"test struct {\n\ta bool\n\tb int\n}", "struct test*"},
 }
 
 func TestFromGoType(t *testing.T) {
