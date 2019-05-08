@@ -118,14 +118,14 @@ func separatePtr(gotype string) (newgotype string, ptr string) {
 }
 
 func isAnonymousStruct(gotype string) bool {
-	re, _ := regexp.Compile(`^[a-zA-Z0-9]+ struct`)
+	re, _ := regexp.Compile(`^struct`)
 	return re.MatchString(gotype)
 }
 
 func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, dependentTypes []*CStructMeta) {
 	anonymousBegin := "struct {\n"
 	anonymousField := "\t%s %s // gotype: %s\n"
-	anonymousEnd := "} %s\n"
+	anonymousEnd := "}"
 
 	var ctypeBytes bytes.Buffer
 
@@ -135,7 +135,7 @@ func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, depend
 	}
 
 	// Add package main for parsing
-	src := fmt.Sprintf("package main;\ntype %s", gotype)
+	src := fmt.Sprintf("package main;\ntype anonymous %s", gotype)
 
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, "", src, 0)
@@ -148,12 +148,6 @@ func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, depend
 	t := typeDecl.Specs[0].(*ast.TypeSpec)
 	structDecl := t.Type.(*ast.StructType)
 	fields := structDecl.Fields.List
-
-	typeName := t.Name.Name
-	cDeclaration, err := NewCStructMeta(typeName, false)
-	if err != nil {
-		return "void*", dependentTypes
-	}
 
 	for _, field := range fields {
 		typeExpr := field.Type
@@ -177,12 +171,10 @@ func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, depend
 	}
 
 _:
-	fmt.Fprintf(&ctypeBytes, anonymousEnd, typeName)
+	fmt.Fprintf(&ctypeBytes, anonymousEnd)
 	if err != nil {
 		return "void*", dependentTypes
 	}
-
-	dependentTypes = append(dependentTypes, cDeclaration)
 
 	return ctypeBytes.String(), dependentTypes
 }
