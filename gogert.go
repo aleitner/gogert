@@ -123,6 +123,17 @@ func isAnonymousStruct(gotype string) bool {
 }
 
 func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, dependentTypes []*CStructMeta) {
+	anonymousBegin := `struct {\n`
+	anonymousField := `\t%s %s // gotype: %s\n`
+	anonymousEnd := `} %s\n`
+
+	var ctypeBytes bytes.Buffer
+
+	_, err := fmt.Fprintf(&ctypeBytes, anonymousBegin)
+	if err != nil {
+		return "void*", dependentTypes
+	}
+
 	// Add package main for parsing
 	src := fmt.Sprintf("package main;\ntype %s", gotype)
 
@@ -156,21 +167,25 @@ func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, depend
 		fieldName := field.Names[0].Name
 
 		fieldCType, fieldDependencies := c.FromGoType(typeInSource)
-		cDeclaration.Fields = append(cDeclaration.Fields, &Field{
-			Name:   fieldName,
-			CType:  fieldCType,
-			GoType: typeInSource,
-		})
 
-		cDeclaration.DependencyStructNames = append(cDeclaration.DependencyStructNames, fieldName)
+		_, err := fmt.Fprintf(&ctypeBytes, anonymousField, fieldCType, fieldName, typeInSource)
+		if err != nil {
+			return "void*", dependentTypes
+		}
+
+		// cDeclaration.DependencyStructNames = append(cDeclaration.DependencyStructNames, fieldName)
 		dependentTypes = append(dependentTypes, fieldDependencies...)
 	}
 
-	ctype = fmt.Sprintf("struct %s*", typeName)
+_:
+	fmt.Fprintf(&ctypeBytes, anonymousEnd, typeName)
+	if err != nil {
+		return "void*", dependentTypes
+	}
 
 	dependentTypes = append(dependentTypes, cDeclaration)
 
-	return ctype, dependentTypes
+	return ctypeBytes.String(), dependentTypes
 }
 
 func (c *TypeConverter) fromComplexType(gotype string) (ctype string, dependentTypes []*CStructMeta) {
