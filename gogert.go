@@ -123,9 +123,9 @@ func isAnonymousStruct(gotype string) bool {
 }
 
 func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, dependentTypes []*CStructMeta) {
-	anonymousBegin := `struct {\n`
-	anonymousField := `\t%s %s // gotype: %s\n`
-	anonymousEnd := `} %s\n`
+	anonymousBegin := "struct {\n"
+	anonymousField := "\t%s %s // gotype: %s\n"
+	anonymousEnd := "} %s\n"
 
 	var ctypeBytes bytes.Buffer
 
@@ -173,7 +173,6 @@ func (c *TypeConverter) fromAnonymousStruct(gotype string) (ctype string, depend
 			return "void*", dependentTypes
 		}
 
-		// cDeclaration.DependencyStructNames = append(cDeclaration.DependencyStructNames, fieldName)
 		dependentTypes = append(dependentTypes, fieldDependencies...)
 	}
 
