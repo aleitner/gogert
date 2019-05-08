@@ -223,8 +223,10 @@ func (c *TypeConverter) fromBasicType(gotype string) string {
 		return "float _Complex"
 	case "complex128":
 		return "double _Complex"
-	default:
+	case "interface{}":
 		return "void*"
+	default:
+		return gotype
 	}
 
 	return ""
